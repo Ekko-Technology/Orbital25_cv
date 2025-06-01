@@ -121,5 +121,5 @@ def thresholding():
 
 if __name__ == "__main__":
     # track_color()
-    # isolate_color()
-    thresholding()
+    isolate_color()
+    # thresholding()

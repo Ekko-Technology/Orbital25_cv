@@ -1,0 +1,111 @@
+To use Docker Compose, you’ll need at least one Dockerfile per service that isn’t using a prebuilt image (like MongoDB). In your case, you’ll likely need:
+
+📁 Folder Structure Example
+spot-the-difference/
+├── docker-compose.yml
+├── frontend/                # React + Bootstrap
+│   ├── Dockerfile
+│   └── ... (React files)
+├── backend/                 # Flask + OpenCV
+│   ├── Dockerfile
+│   ├── requirements.txt
+│   └── ... (Flask app)
+
+
+🔧 Example: backend/Dockerfile (Flask + OpenCV)
+Dockerfile
+
+# Use an official Python image
+FROM python:3.10-slim
+
+# Set work directory
+WORKDIR /app
+
+# Copy files
+COPY . .
+
+# Install dependencies
+RUN pip install --upgrade pip
+RUN pip install -r requirements.txt
+
+# Expose Flask port
+EXPOSE 5000
+
+# Run the app
+CMD ["python", "app.py"]
+
+
+
+Make sure your requirements.txt includes:
+
+flask
+opencv-python
+pymongo  # if you're connecting to MongoDB
+
+
+
+🔧 Example: frontend/Dockerfile (React.js + Bootstrap)
+Dockerfile
+
+# Use Node.js base image
+FROM node:18
+
+# Set work directory
+WORKDIR /app
+
+# Copy project files
+COPY . .
+
+# Install frontend dependencies
+RUN npm install
+
+# Build the production version (optional)
+RUN npm run build
+
+# Run development server (or serve the build folder with Nginx if production)
+CMD ["npm", "start"]
+
+Ensure your React app is listening on port 3000 (default), and it's not hardcoded to localhost when calling your Flask API.
+
+
+
+🔧 Example: docker-compose.yml
+
+version: '3.8'
+
+services:
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+  backend:
+    build: ./backend
+    ports:
+      - "5000:5000"
+    depends_on:
+      - mongodb
+
+  mongodb:
+    image: mongo:5
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+volumes:
+  mongo_data:
+
+
+
+
+✅ TL;DR:
+Yes, you’ll need a Dockerfile for both:
+
+The Flask backend
+
+The React frontend
+
+MongoDB uses a prebuilt image (mongo:5), so no Dockerfile needed for that.
