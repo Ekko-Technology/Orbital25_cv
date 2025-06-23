@@ -1,3 +1,68 @@
+REACT
+1. Change logic of identifying differences. Circles should only appear when user presses the correct boundary and a temporary/permenent red X on wrong locations. 
+2. inaccuracies in react logic: clicked on difference and acknowledged as incorrect
+3. After 3 wrong tries, Red circles should be shown permenently around the unidentified changes
+
+
+OPENCV backend
+1. Expansions are being expanded from the bottom right corner. Should be centred.
+2. Black reminence from the black mask for expanding contours
+3. handle/filter long perimeters contours. expansions and color changes should only be on contours with small perimeter to area ratio.
+
+
+
+
+        <Card className="h-100 shadow-sm">
+            <Form>
+                {/* Hidden file input */}
+                <Form.Control
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    ref={fileInputRef}
+                    className="d-none" 
+                />
+            </Form>
+            <Card.Header className="text-center bg-dark text-white">Original Image</Card.Header>
+            <Card.Body className="cardBodyStyle">
+            {originalImageUrl ? (
+                <img key={originalImageUrl} src={originalImageUrl} alt="Original" className="img-fluid imageStyle"/>
+            ) : (
+                <div className="text-center text-muted d-flex flex-column align-items-center">
+                <ImageIcon size={64} className="mb-3" />
+                <Button variant="link" className="p-0 border-0 text-decoration-none" onClick={triggerFileInput}>
+                    <p className="mb-0">Upload an image to begin</p>
+                </Button>
+                </div>
+            )}
+            </Card.Body>
+        </Card>
+
+
+
+
+
+
+
+
+
+/src
+  /components
+    ImageCard.jsx
+    CanvasOverlay.jsx
+    MessageAlert.jsx
+    FileUploadButton.jsx
+  /hooks
+    useImageGameLogic.js
+  /pages
+    Homebody.jsx
+  /styles
+    home-body.css
+
+
+
+
+
 To use Docker Compose, you’ll need at least one Dockerfile per service that isn’t using a prebuilt image (like MongoDB). In your case, you’ll likely need:
 
 📁 Folder Structure Example

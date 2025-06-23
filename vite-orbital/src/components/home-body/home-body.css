@@ -1,0 +1,15 @@
+.cardBodyStyle {
+    min-height: 400px;
+    display: flex;
+    justify-content: center;
+    flex-direction:column;
+    align-items: center;
+    padding: 0;
+    overflow: hidden;
+}
+
+.imageStyle {
+    width: 90%;
+    height: 90%;
+    object-fit: contain;
+}

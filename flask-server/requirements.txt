@@ -1,0 +1,6 @@
+Flask==3.1.1
+flask_cors==6.0.0
+matplotlib==3.10.3
+numpy==2.2.6
+opencv_python==4.11.0.86
+scikit_learn==1.6.1
