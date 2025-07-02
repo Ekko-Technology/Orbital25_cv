@@ -106,6 +106,8 @@ def change_color(img, contour):
 
     return img
 
+
+
 def expand_contour(img, contour, expansion_factor):
     # Create a black mask of the same size as the image
     mask_img = np.zeros(img.shape[:2], dtype=np.uint8) 
@@ -153,6 +155,8 @@ def expand_contour(img, contour, expansion_factor):
 
     return img
 
+
+
 def find_closest_pixels(img, target_bgr, k=25):
     height, width, _ = img.shape
     # flatten the image to 2D array of pixels so e.g. (480x640x3) becomes (307200, 3)
@@ -168,6 +172,7 @@ def find_closest_pixels(img, target_bgr, k=25):
     # get the coordinates of the k nearest neighbors
     matched_coordinates = coordinates[indices[0]]
     return matched_coordinates.tolist()
+
 
 
 # finding euclidean distance
@@ -232,7 +237,7 @@ def paste_object(base_img, object_path, target_coordinate, alpha=0.5, intended_w
     object_img = cv2.imread(object_path, cv2.IMREAD_UNCHANGED)
     h, w, c = object_img.shape
 
-    # resize the object image to ur intended width for the game
+    # resize the object image to intended width for the game
     intended_height = int(h * intended_width/ w)  # resize the object image height in proportion to intended width
     object_img = cv2.resize(object_img, (intended_width,intended_height))  # resize the object image to a fixed size
 
