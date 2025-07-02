@@ -66,27 +66,70 @@ function Homebody() {
     // Draw circles for correct and incorrect clicks
     clickAttempts.forEach((attempt) => {
       const {x, y, type, timestamp} = attempt;
-      if (type === "correct")
-      {
+      if (type === "wrong" && (now - timestamp) < X_DURATION) {
+        ctx.save()
+        ctx.strokeStyle = "red";
+        ctx.lineWidth = 4;
         ctx.beginPath();
-        ctx.arc(x, y, 20, 0, Math.PI * 2);
+        ctx.moveTo(x - 10, y - 10);
+        ctx.lineTo(x + 10, y + 10);
+        ctx.moveTo(x + 10, y - 10);
+        ctx.lineTo(x - 10, y + 10);
+        ctx.stroke();
+        ctx.restore();
+      }
+    });
+
+    // Draw model answer circles for found differences
+    differences.forEach((diff) => {
+      if (foundDifferences.has(diff.id)) {
+        const [x1_natural, y1_natural, x2_natural, y2_natural] = diff.coords;
+        const scaleX = displayedWidth / naturalWidth;
+        const scaleY = displayedHeight / naturalHeight;
+        const x1_display = x1_natural * scaleX;
+        const y1_display = y1_natural * scaleY;
+        const x2_display = x2_natural * scaleX;
+        const y2_display = y2_natural * scaleY;
+        const centerX_display = (x1_display + x2_display) / 2;
+        const centerY_display = (y1_display + y2_display) / 2;
+        const radius = Math.max(
+          (x2_display - x1_display) / 2,
+          (y2_display - y1_display) / 2,
+          20
+        );
+        ctx.beginPath();
+        ctx.arc(centerX_display, centerY_display, radius, 0, Math.PI * 2);
         ctx.lineWidth = 3;
         ctx.strokeStyle = "green";
         ctx.stroke();
       }
-      else if (type === "wrong" && (now - timestamp) < X_DURATION) {
-        ctx.save();
-        ctx.strokeStyle = "red";
-        ctx.lineWidth = 4;
-        ctx.beginPath();
-        ctx.moveTo(x - 8, y - 8);
-      ctx.lineTo(x + 8, y + 8);
-      ctx.moveTo(x + 8, y - 8);
-      ctx.lineTo(x - 8, y + 8);
-      ctx.stroke();
-      ctx.restore();
-      }
     });
+
+    
+  //   clickAttempts.forEach((attempt) => {
+  //     const {x, y, type, timestamp} = attempt;
+  //     if (type === "correct")
+  //     {
+  //       ctx.beginPath();
+  //       ctx.arc(x, y, 20, 0, Math.PI * 2);
+  //       ctx.lineWidth = 3;
+  //       ctx.strokeStyle = "green";
+  //       ctx.stroke();
+  //     }
+  //     else if (type === "wrong" && (now - timestamp) < X_DURATION) {
+  //       ctx.save();
+  //       ctx.strokeStyle = "red";
+  //       ctx.lineWidth = 4;
+  //       ctx.beginPath();
+  //       ctx.moveTo(x - 10, y - 10);
+  //     ctx.lineTo(x + 10, y + 10);
+  //     ctx.moveTo(x + 10, y - 10);
+  //     ctx.lineTo(x - 10, y + 10);
+  //     ctx.stroke();
+  //     ctx.restore();
+  //     }
+  //   });
+
 
     // If game is over (all found or too many wrong clicks), reveal all differences
     if (foundDifferences.size === differences.length && differences.length > 0) {
@@ -314,14 +357,6 @@ function Homebody() {
     if (isCorrectClick) {
       if (foundDiffId) {
         setFoundDifferences((prev) => new Set(prev).add(foundDiffId));
-        setClickAttempts((prev) => [
-          ...prev,
-          {
-            x: clickX_display,
-            y: clickY_display,
-            type: "correct",
-          },
-        ]);
         setMessage("Difference found! Keep going!");
 
         // Check if all differences are found
@@ -415,6 +450,7 @@ function Homebody() {
             fileInputRef={fileInputRef}
             triggerFileInput={triggerFileInput}
             originalImageUrl={originalImageUrl}
+            modifiedImageUrl={modifiedImageUrl}
           />
         </Col>
 

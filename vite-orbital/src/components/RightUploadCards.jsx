@@ -12,26 +12,24 @@ function RightUploadCard({ onUpload, loading, selectedFile, modifiedImageUrl, mo
             <Card.Body className="cardBodyStyle" style={{ position: 'relative' }}>
                 {modifiedImageUrl ? (
                     <>
-                    <img
-                        ref={modifiedImageRef}
-                        key={modifiedImageUrl}
-                        src={modifiedImageUrl}
-                        alt="Modified"
-                        className="img-fluid imageStyle"
-                        style={{ cursor: gameStarted && foundDifferences.size < differences.length && clickAttempts.filter(a => a.type === 'wrong').length < MAX_WRONG_CLICKS ? 'pointer' : 'default' }}
-                        onClick={handleImageClick}
-                    />
-                    <canvas
-                        ref={canvasRef}
-                        style={{
-                        position: 'absolute',
-                        top: '5%',
-                        left: '5%', 
-                        width: '90%',
-                        height: '90%', 
-                        pointerEvents: 'none',
-                        }}
-                    />
+                        <img
+                            ref={modifiedImageRef}
+                            key={modifiedImageUrl}
+                            src={modifiedImageUrl}
+                            alt="Modified"
+                            className="img-fluid"
+                            style={{ cursor: gameStarted && foundDifferences.size < differences.length && clickAttempts.filter(a => a.type === 'wrong').length < MAX_WRONG_CLICKS ? 'pointer' : 'default' }}
+                            onClick={handleImageClick}
+                        />
+                        <canvas
+                            ref={canvasRef}
+                            style={{
+                            position: 'absolute', 
+                            width: '100%',
+                            height: '100%', 
+                            pointerEvents: 'none',
+                            }}
+                        />
                     </>
                 ) : (
                     <div className="text-center text-muted d-flex flex-column align-items-center">

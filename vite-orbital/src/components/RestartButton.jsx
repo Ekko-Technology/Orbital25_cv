@@ -46,7 +46,7 @@ function RestartButton({gameEnded, Loading, onRestart, showConfirm, setShowConfi
                     onRestart();
                     }}
                 >
-                    Restart
+                    Confirm
                 </Button>
                 </Modal.Footer>
             </Modal> 

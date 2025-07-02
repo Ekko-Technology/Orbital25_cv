@@ -62,8 +62,20 @@ def upload_and_process():
             if original_img_array is None:
                 return jsonify({'error': 'Could not read original image file (OpenCV failed to load)'}), 500
 
-            # resize the original image to 640x640 for preprocessing
-            original_img_array = cv2.resize(original_img_array, (640, 640))
+            # resize the original image to an approriate size for preprocessing
+            fixed_width = 640
+            h, w = original_img_array.shape[:2]
+            aspect_ratio = h / w
+            MIN_ASPECT_RATIO = 0.5
+            MAX_ASPECT_RATIO = 2.0
+            if not (MIN_ASPECT_RATIO <= aspect_ratio <= MAX_ASPECT_RATIO):
+                return jsonify({'error': f"Image aspect ratio is too extreme. Please upload an image that it is more square-ish"}), 400
+            
+            new_height = int(fixed_width * aspect_ratio)
+            original_img_array = cv2.resize(original_img_array, (fixed_width, new_height))
+
+            # Save the resized original image
+            cv2.imwrite(original_filepath, original_img_array)
 
 
             # Randomly choose manipulation type

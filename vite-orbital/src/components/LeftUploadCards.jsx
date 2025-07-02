@@ -2,7 +2,7 @@ import React from 'react';
 import {Button, Form, Spinner, Card} from 'react-bootstrap';
 import {Image as ImageIcon} from 'lucide-react'
 
-function LeftUploadCard({ HeaderText, onFileSelect, onUpload, loading, selectedFile, fileInputRef, triggerFileInput, originalImageUrl}) {
+function LeftUploadCard({ HeaderText, onFileSelect, onUpload, loading, selectedFile, fileInputRef, triggerFileInput, originalImageUrl, modifiedImageUrl}) {
     return (
         <Card className="h-100 shadow-sm">
             <Card.Header className="text-center bg-dark text-white">
@@ -29,7 +29,7 @@ function LeftUploadCard({ HeaderText, onFileSelect, onUpload, loading, selectedF
                         src={originalImageUrl}
                         alt="Original Upload"
                         className="img-fluid"
-                        style={{ maxHeight: '300px', objectFit: 'contain' }}
+                        style={{ objectFit: 'contain' }}
                         />
                     </div>
                 ) : (               
@@ -48,7 +48,7 @@ function LeftUploadCard({ HeaderText, onFileSelect, onUpload, loading, selectedF
                 )}
 
                 {/* upload Button (only if file selected) */}
-                {selectedFile && (
+                {selectedFile && !modifiedImageUrl && (
                     <div className="mt-3">
                         {loading ? (
                         <Spinner animation="border" size="sm" />) : (
