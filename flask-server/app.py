@@ -1,18 +1,141 @@
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
+from flask_sqlalchemy import SQLAlchemy
 import os
 import cv2
 import numpy as np
 import random
-from datetime import datetime
+from datetime import datetime, timezone
+# for securing user password
+from werkzeug.security import generate_password_hash, check_password_hash 
 
 from image_processing import apply_changes
 
-app = Flask(__name__)
 
+app = Flask(__name__)
 # Allows Flask as a backend to be accessed from React which is ran on another domain
 CORS(app) 
 
+# Postgresql configuration with render
+db_url = os.getenv('DATABASE_URL') # Render Supports this internally
+if db_url:
+    app.config['SQLALCHEMY_DATABASE_URI'] = db_url.replace("postgres://", "postgresql://", 1)  # Render fix
+else:
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///local.db'  # fallback for local dev
+
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)  # Initialize the DB
+
+
+# User Table for storing user's particulars
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(150), unique=True, nullable=False)
+    password_hash = db.Column(db.String(128), nullable=False)  # Hashed password
+
+    # JOINS with GameRecord Table 
+    game_records = db.relationship('GameRecord', backref='user', lazy=True)
+
+    # Optional: helper methods
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+    
+
+# Table to track User's past scores and history
+class GameRecord(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    original_image_path = db.Column(db.String(255), nullable=False)
+    modified_image_path = db.Column(db.String(255), nullable=False)
+    score = db.Column(db.Integer, nullable=False)
+    total_differences = db.Column(db.Integer, nullable=False)
+    time_taken = db.Column(db.Float, nullable=False)
+    played_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+
+
+    
+# ----- User Logins ------
+@app.route('/register', methods=['POST'])
+def register_user():
+    data = request.json
+    username = data.get('username')
+    password = data.get('password')
+
+    if not username or not password:
+        return jsonify({'error': 'Username and password required'}), 400
+
+    if User.query.filter_by(username=username).first():
+        return jsonify({'error': 'Username already exists'}), 409
+
+    user = User(username=username)
+    user.set_password(password)  # Hash password
+    db.session.add(user)
+    db.session.commit()
+
+    return jsonify({'message': 'User created', 'user_id': user.id})
+
+# 
+@app.route('/login', methods=['POST'])
+def login_user():
+    data = request.json
+    username = data.get('username')
+    password = data.get('password')
+
+    user = User.query.filter_by(username=username).first()
+    if user and user.check_password(password):
+        return jsonify({'message': 'Login successful', 'user_id': user.id})
+    return jsonify({'error': 'Invalid username or password'}), 401
+
+
+@app.route('/save-game', methods=['POST'])
+def save_game():
+    data = request.json
+    user_id = data.get('user_id')
+    original_path = data.get('original_image')
+    modified_path = data.get('modified_image')
+    score = data.get('score')
+    total = data.get('total')
+    time_taken = data.get('time_taken')
+
+    if not all([user_id, original_path, modified_path, score, total, time_taken]):
+        return jsonify({'error': 'Missing fields'}), 400
+
+    game = GameRecord(
+        user_id=user_id,
+        original_image_path=original_path,
+        modified_image_path=modified_path,
+        score=score,
+        total_differences=total,
+        time_taken=time_taken
+    )
+    db.session.add(game)
+    db.session.commit()
+
+    return jsonify({'message': 'Game saved', 'record_id': game.id}), 201
+
+
+
+@app.route('/user/<int:user_id>/history')
+def game_history(user_id):
+    user = User.query.get_or_404(user_id)
+    games = [{
+        'original_image': g.original_image_path,
+        'modified_image': g.modified_image_path,
+        'score': g.score,
+        'total': g.total_differences,
+        'time_taken': g.time_taken,
+        'played_at': g.played_at.isoformat()
+    } for g in user.game_records]
+
+    return jsonify({'username': user.username, 'games': games})
+
+
+
+
+# ----- Image modification Backend Logic ------
 UPLOAD_FOLDER = 'uploads' # Directory to save uploaded and processed images
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
@@ -131,5 +254,9 @@ def uploaded_file(filename):
 if __name__ == '__main__':
     if not os.path.exists(objects_path):
         os.makedirs(objects_path)
+    
+    # Created database tables are created at startup
+    with app.app_context():   
+        db.create_all()
 
     app.run(debug=True, port=5000)
