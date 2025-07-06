@@ -7,3 +7,4 @@ numpy==2.2.6
 opencv_python==4.11.0.86
 scikit_learn==1.6.1
 gunicorn
+cloudinary

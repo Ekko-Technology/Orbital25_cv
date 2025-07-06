@@ -247,6 +247,8 @@ function Homebody() {
     setError("");
     setMessage("");
 
+
+    //sends response to flask backend for "upload-and-process"
     const formData = new FormData();
     formData.append("image", selectedFile);
 
@@ -260,7 +262,8 @@ function Homebody() {
           },
         }
       );
-
+      
+      // response handling from backend 
       const {
         originalImageUrl: backendOriginalUrl,
         modifiedImageUrl,

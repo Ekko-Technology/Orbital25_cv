@@ -8,13 +8,23 @@ import random
 from datetime import datetime, timezone
 # for securing user password
 from werkzeug.security import generate_password_hash, check_password_hash 
-
+# import libraries to initialize cloudinary for image storage
+import cloudinary
+import cloudinary.uploader as cloud_upload
 from image_processing import apply_changes
 
 
 app = Flask(__name__)
 # Allows Flask as a backend to be accessed from React which is ran on another domain
 CORS(app) 
+
+# Configure Cloudinary
+cloudinary.config(
+    cloud_name = os.getenv("CLOUDINARY_NAME"), 
+    api_key = os.getenv("CLOUDINARY_API_KEY"), 
+    api_secret = os.getenv("CLOUDINARY_API_SECRET"), # Click 'View API Keys' above to copy your API secret
+    secure=True
+)
 
 # Postgresql configuration with render
 db_url = os.getenv('DATABASE_URL') # Render Supports this internally
@@ -36,7 +46,7 @@ class User(db.Model):
     # JOINS with GameRecord Table 
     game_records = db.relationship('GameRecord', backref='user', lazy=True)
 
-    # Optional: helper methods
+    # Standard helper methods for generating password
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
 
@@ -44,7 +54,7 @@ class User(db.Model):
         return check_password_hash(self.password_hash, password)
     
 
-# Table to track User's past scores and history
+# Table to track User's past images, scores and history
 class GameRecord(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -169,6 +179,7 @@ def upload_and_process():
         try:
             
             timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+            # obtain image type (e.g. jpg, jpeg)
             original_extension = file.filename.rsplit('.', 1)[1].lower()
             original_filename = f"original_{timestamp}.{original_extension}"
             modified_filename = f"modified_{timestamp}.{original_extension}" # Keep same extension for modified
@@ -192,7 +203,7 @@ def upload_and_process():
             MIN_ASPECT_RATIO = 0.5
             MAX_ASPECT_RATIO = 2.0
             if not (MIN_ASPECT_RATIO <= aspect_ratio <= MAX_ASPECT_RATIO):
-                return jsonify({'error': f"Image aspect ratio is too extreme. Please upload an image that it is more square-ish"}), 400
+                return jsonify({'error': f"Image aspect ratio is too extreme. Please upload an image that it is more square-ish"}), 400 # Code 400 for invalid inputs error
             
             new_height = int(fixed_width * aspect_ratio)
             original_img_array = cv2.resize(original_img_array, (fixed_width, new_height))
@@ -201,19 +212,7 @@ def upload_and_process():
             cv2.imwrite(original_filepath, original_img_array)
 
 
-            # Randomly choose manipulation type
-            # manipulation_type = random.choice(['contour', 'add_object'])
-            # if manipulation_type == 'contour':
-            #     print("Backend: Applying contour manipulation...")
-            #     modified_img_array, differences = apply_contour_manipulation(original_img_array, num_of_changes=2)
-            #     print(f"Backend: Contour differences generated: {len(differences)}")
-            # elif manipulation_type == 'add_object':
-            #     print("Backend: Applying object addition manipulation...")
-            #     modified_img_array, differences = apply_object_addition(original_img_array, num_objects=2, alpha=0.5, intended_width=30)
-            #     print(f"Backend: Object addition differences generated: {len(differences)}")
-
-
-
+            # apply image modifications
             num_changes = 4
 
             modified_img_array, differences = apply_changes(original_img_array, num_changes)
@@ -227,28 +226,54 @@ def upload_and_process():
                 modified_img_array = original_img_array.copy()
                 differences = [] # No changes if manipulation failed
 
-            # Save the modified image
+            # Save modified image from a numpy array to file before uploading into cloudinary
             cv2.imwrite(modified_filepath, modified_img_array)
-            print(f"Modified image saved to: {modified_filepath}")
+            
+            # OPTION 1: Upload the images within Cloudinary
+            cloudinary_original = cloud_upload.upload(original_filepath)
+            cloudinary_modified = cloud_upload.upload(modified_filepath)
 
+            # URL from cloudinary to access images
+            original_url = cloudinary_original['secure_url']
+            modified_url = cloudinary_modified['secure_url']
 
-            # returns the filepaths of both the original and modifed images in JSON format 
+            # To save space, delete the images stored internally once uploads are complete
+            try:
+                os.remove(original_filepath)
+                os.remove(modified_filepath)
+            except Exception as e:
+                print(f"Error removing locally stored files after cloudinary uploads: {e}")
+
+            # return cloudinary filepaths in JSON format
             return jsonify({
-                'originalImageUrl': f'/{UPLOAD_FOLDER}/{original_filename}',
-                'modifiedImageUrl': f'/{UPLOAD_FOLDER}/{modified_filename}',
-                'rawDifferencesForFrontendDemo': differences # Send the bounding box differences
-            }), 200 # 200 is the status code for successful request
+                'originalImageUrl': original_url,
+                'modifiedImageUrl':modified_url,
+                'rawDifferencesForFrontendDemo': differences # Send the bounding box differences'
+            }), 200
+
+
+            # # OPTION 2: Save the modified image internally (failsafe)
+            # cv2.imwrite(modified_filepath, modified_img_array)
+            # print(f"Modified image saved to: {modified_filepath}")
+
+            # # If loaded internally, return filepaths of both original and modifed images in JSON format 
+            # return jsonify({
+            #     'originalImageUrl': f'/{UPLOAD_FOLDER}/{original_filename}',
+            #     'modifiedImageUrl': f'/{UPLOAD_FOLDER}/{modified_filename}',
+            #     'rawDifferencesForFrontendDemo': differences # Send the bounding box differences
+            # }), 200 # 200 is the status code for successful request
 
         except Exception as e:
             print(f"Server error during processing: {e}")
 
     else:
-        return jsonify({'error': 'Invalid file type. Allowed: png, jpg, jpeg, gif'}), 400
+        return jsonify({'error': 'Invalid file type. Allowed: png, jpg, jpeg, gif'}), 400 # Code 400 for invalid inputs error
 
-# Route to serve the uploaded/modified files
-@app.route(f'/{UPLOAD_FOLDER}/<filename>')
-def uploaded_file(filename):
-    return send_from_directory(UPLOAD_FOLDER, filename)
+
+# Route to serve the uploaded/modified files (only needed if serving files from own internal server storage)
+# @app.route(f'/{UPLOAD_FOLDER}/<filename>')
+# def uploaded_file(filename):
+#     return send_from_directory(UPLOAD_FOLDER, filename)
 
 
 if __name__ == '__main__':
