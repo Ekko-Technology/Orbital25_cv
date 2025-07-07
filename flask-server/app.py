@@ -282,19 +282,22 @@ def upload_and_process():
     else:
         return jsonify({'error': 'Invalid file type. Allowed: png, jpg, jpeg, gif'}), 400 # Code 400 for invalid inputs error
 
-
 # Route to serve the uploaded/modified files (only needed if serving files from own internal server storage)
 # @app.route(f'/{UPLOAD_FOLDER}/<filename>')
 # def uploaded_file(filename):
 #     return send_from_directory(UPLOAD_FOLDER, filename)
 
 
+
+# Created database tables are created at startup
+with app.app_context():   
+    db.create_all()
+
+
 if __name__ == '__main__':
     if not os.path.exists(objects_path):
         os.makedirs(objects_path)
-    
-    # Created database tables are created at startup
-    with app.app_context():   
-        db.create_all()
 
     app.run(debug=True, port=5000)
+
+
