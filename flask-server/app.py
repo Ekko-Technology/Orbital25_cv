@@ -66,16 +66,12 @@ class GameRecord(db.Model):
     played_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
 
-@app.before_first_request
-def create_tables():
-    db.create_all()
-
 
 @app.route('/')
 def index():
     return "Flask backend is running on render"
 
-    
+
 # ----- User Logins ------
 # Backend for handling user data when registering new user
 @app.route('/register', methods=['POST'])
