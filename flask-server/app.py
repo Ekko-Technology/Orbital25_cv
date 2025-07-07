@@ -68,6 +68,7 @@ class GameRecord(db.Model):
 
     
 # ----- User Logins ------
+# Backend for handling user data when registering new user
 @app.route('/register', methods=['POST'])
 def register_user():
     data = request.json
@@ -87,7 +88,9 @@ def register_user():
 
     return jsonify({'message': 'User created', 'user_id': user.id})
 
-# 
+
+
+# Backend of user login page
 @app.route('/login', methods=['POST'])
 def login_user():
     data = request.json
@@ -100,6 +103,7 @@ def login_user():
     return jsonify({'error': 'Invalid username or password'}), 401
 
 
+# Backend for 
 @app.route('/save-game', methods=['POST'])
 def save_game():
     data = request.json
