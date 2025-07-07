@@ -41,7 +41,7 @@ db = SQLAlchemy(app)  # Initialize the DB
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(150), unique=True, nullable=False)
-    password_hash = db.Column(db.String(128), nullable=False)  # Hashed password
+    password_hash = db.Column(db.String(256), nullable=False)  # Hashed password
 
     # JOINS with GameRecord Table 
     game_records = db.relationship('GameRecord', backref='user', lazy=True)
@@ -286,7 +286,8 @@ def upload_and_process():
 
 
 # Created database tables are created at startup
-with app.app_context():   
+with app.app_context(): 
+    db.drop_all()  
     db.create_all()
 
 

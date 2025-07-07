@@ -17,7 +17,10 @@ import RestartButton from "../RestartButton";
 import axios from "axios";
 import { v4 as uuidv4 } from "uuid";
 
-const BACKEND_URL = "http://localhost:5000"; // Connecting to Flask backend
+
+const BACKEND_URL = "https://orbital25-cv.onrender.com"; // Connecting to Render-hosted backend
+
+// const BACKEND_URL = "http://localhost:5000"; // Connecting to Flask backend
 
 function Homebody() {
   const [selectedFile, setSelectedFile] = useState(null);
@@ -275,8 +278,11 @@ function Homebody() {
         URL.revokeObjectURL(originalImageUrl);
       }
 
-      setOriginalImageUrl(`${BACKEND_URL}${backendOriginalUrl}`);
-      setModifiedImageUrl(`${BACKEND_URL}${modifiedImageUrl}`);
+      
+      setOriginalImageUrl(backendOriginalUrl);
+      setModifiedImageUrl(modifiedImageUrl);
+      // setOriginalImageUrl(`${BACKEND_URL}${backendOriginalUrl}`);
+      // setModifiedImageUrl(`${BACKEND_URL}${modifiedImageUrl}`);
 
       // Assign a unique ID to each difference for tracking found differences
       const differencesWithIds = rawDifferencesForFrontendDemo.map(
