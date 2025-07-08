@@ -3,6 +3,7 @@ import numpy as np
 import random as rd
 import os
 from sklearn.neighbors import NearestNeighbors
+import logging
 
 """
 The python file here condenses all the image operations within modification.
@@ -315,11 +316,11 @@ def apply_contour_manipulation(original_img_array, all_coordinate_changes, num_o
         transform_type = rd.choice(list(DICT_TRANSFORMS.keys()))
         
         if transform_type == 1:
-            print(f"Applying color change to contour {i+1}...")
+            logging.info(f"Applying color change to contour {i+1}...")
             img_modified = change_color(img_modified, contour_chosen)
         elif transform_type == 2:
             expansion_factor = rd.uniform(1.4, 1.5)
-            print(f"Applying expansion (factor {expansion_factor}) to contour {i+1}...")
+            logging.info(f"Applying expansion (factor {expansion_factor}) to contour {i+1}...")
             img_modified = expand_contour(img_modified, contour_chosen, expansion_factor)
     
     return img_modified
@@ -375,8 +376,10 @@ def apply_object_addition(original_img_array, all_coordinate_changes, num_object
 def apply_changes(original_img_array, num_changes):
     all_coordinate_changes = []
 
-    num_add_change = rd.randint(0, num_changes)
+    num_add_change = rd.randint(0, num_changes-1)
     num_object_change = num_changes - num_add_change
+    logging.info(f"Add Objects: {num_add_change}")
+    logging.info(f"Changed Objects: {num_object_change}")
 
     img_after_contour_changes = apply_contour_manipulation(original_img_array, all_coordinate_changes, num_object_change)
 

@@ -5,6 +5,7 @@ import os
 import cv2
 import numpy as np
 import random
+import logging
 from datetime import datetime, timezone
 # for securing user password
 from werkzeug.security import generate_password_hash, check_password_hash 
@@ -41,7 +42,7 @@ db = SQLAlchemy(app)  # Initialize the DB
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(150), unique=True, nullable=False)
-    password_hash = db.Column(db.String(256), nullable=False)  # Hashed password
+    password_hash = db.Column(db.Text, nullable=False)  # Hashed password
 
     # JOINS with GameRecord Table 
     game_records = db.relationship('GameRecord', backref='user', lazy=True)
@@ -76,22 +77,27 @@ def index():
 # Backend for handling user data when registering new user
 @app.route('/register', methods=['POST'])
 def register_user():
-    data = request.json
-    username = data.get('username')
-    password = data.get('password')
+    try:
+        data = request.json
+        username = data.get('username')
+        password = data.get('password')
 
-    if not username or not password:
-        return jsonify({'error': 'Username and password required'}), 400
+        if not username or not password:
+            return jsonify({'error': 'Username and password required'}), 400
 
-    if User.query.filter_by(username=username).first():
-        return jsonify({'error': 'Username already exists'}), 409
+        if User.query.filter_by(username=username).first():
+            return jsonify({'error': 'Username already exists'}), 409
 
-    user = User(username=username)
-    user.set_password(password)  # Hash password
-    db.session.add(user)
-    db.session.commit()
+        user = User(username=username)
+        user.set_password(password)  # Hash password
+        db.session.add(user)
+        db.session.commit()
 
-    return jsonify({'message': 'User created', 'user_id': user.id})
+        return jsonify({'message': 'User created', 'user_id': user.id})
+    
+    except Exception as e:
+        app.logger.error(f"[REGISTER ERROR] {e}")
+        return jsonify({'error': 'Server error at registration'}), 500
 
 
 
@@ -225,9 +231,9 @@ def upload_and_process():
             num_changes = 4
 
             modified_img_array, differences = apply_changes(original_img_array, num_changes)
-            print(f"Backend: Differences generated: {len(differences)}")
+            logging.info(f"Backend: Differences generated: {len(differences)}")
 
-            print(differences)
+            logging.info(differences)
 
 
             if modified_img_array is None:
