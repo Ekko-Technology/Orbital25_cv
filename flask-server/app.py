@@ -19,13 +19,15 @@ app = Flask(__name__)
 # Allows Flask as a backend to be accessed from React which is ran on another domain
 CORS(app) 
 
-# Configure Cloudinary
+# Configure Cloudinary for image storage
 cloudinary.config(
     cloud_name = os.getenv("CLOUDINARY_NAME"), 
     api_key = os.getenv("CLOUDINARY_API_KEY"), 
     api_secret = os.getenv("CLOUDINARY_API_SECRET"), # Click 'View API Keys' above to copy your API secret
     secure=True
 )
+
+
 
 # Postgresql configuration with render
 db_url = os.getenv('DATABASE_URL') # Render Supports this internally
@@ -291,10 +293,10 @@ def upload_and_process():
 
 
 
-# Created database tables are created at startup
-with app.app_context(): 
-    db.drop_all()  
-    db.create_all()
+# # Created database tables are created at startup
+# with app.app_context(): 
+#     db.drop_all()  
+#     db.create_all()
 
 
 if __name__ == '__main__':
