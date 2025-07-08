@@ -58,8 +58,9 @@ class User(db.Model):
     
 
 # Table to track User's past images, scores and history
-class GameRecord(db.Model):
+class GameRecord(db.Model): 
     id = db.Column(db.Integer, primary_key=True)
+    # JOINS with User table via User.id value
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     original_image_path = db.Column(db.String(255), nullable=False)
     modified_image_path = db.Column(db.String(255), nullable=False)
@@ -293,10 +294,9 @@ def upload_and_process():
 
 
 
-# # Created database tables are created at startup
-# with app.app_context(): 
-#     db.drop_all()  
-#     db.create_all()
+# Created database tables are created at startup
+with app.app_context(): 
+    db.create_all()
 
 
 if __name__ == '__main__':
