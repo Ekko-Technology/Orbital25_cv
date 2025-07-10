@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, session
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 import os
@@ -16,8 +16,10 @@ from image_processing import apply_changes
 
 
 app = Flask(__name__)
+# initialize secret key for session management and CSRF protection
+app.secret_key = os.getenv("FLASK_SECRET_KEY")
 # Allows Flask as a backend to be accessed from React which is ran on another domain
-CORS(app) 
+CORS(app, supports_credentials=True) 
 
 # Configure Cloudinary for image storage
 cloudinary.config(
@@ -28,13 +30,13 @@ cloudinary.config(
 )
 
 
-
 # Postgresql configuration with render
 db_url = os.getenv('DATABASE_URL') # Render Supports this internally
 if db_url:
     app.config['SQLALCHEMY_DATABASE_URI'] = db_url.replace("postgres://", "postgresql://", 1)  # Render fix
 else:
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///local.db'  # fallback for local dev
+
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)  # Initialize the DB
@@ -113,11 +115,20 @@ def login_user():
 
     user = User.query.filter_by(username=username).first()
     if user and user.check_password(password):
+        # set session
+        session["user_id"] = user.id
         return jsonify({'message': 'Login successful', 'user_id': user.id})
     return jsonify({'error': 'Invalid username or password'}), 401
 
 
-# Backend for 
+# logging out of session
+@app.route('/logout', methods=['POST'])
+def logout():
+    session.pop("user_id", None)
+    return jsonify({"Message": "Logged Out"})
+
+
+# Backend for saving Game Records after game is over
 @app.route('/save-game', methods=['POST'])
 def save_game():
     data = request.json
@@ -128,21 +139,43 @@ def save_game():
     total = data.get('total')
     time_taken = data.get('time_taken')
 
+    if not user_id:
+        return jsonify({'error': 'User not logged in'}), 401
+
     if not all([user_id, original_path, modified_path, score, total, time_taken]):
         return jsonify({'error': 'Missing fields'}), 400
 
-    game = GameRecord(
-        user_id=user_id,
-        original_image_path=original_path,
-        modified_image_path=modified_path,
-        score=score,
-        total_differences=total,
-        time_taken=time_taken
-    )
-    db.session.add(game)
-    db.session.commit()
+    try:
+        # Upload images to Cloudinary
+        cloudinary_original = cloud_upload.upload(original_path)
+        cloudinary_modified = cloud_upload.upload(modified_path)
 
-    return jsonify({'message': 'Game saved', 'record_id': game.id}), 201
+        original_url = cloudinary_original['secure_url']
+        modified_url = cloudinary_modified['secure_url']
+
+        # Clean up local files after upload
+        try:
+            os.remove(original_path)
+            os.remove(modified_path)
+        except Exception as e:
+            print(f"Error deleting local files after upload: {e}")
+
+        game = GameRecord(
+            user_id=user_id,
+            original_image_path=original_url,
+            modified_image_path=modified_url,
+            score=score,
+            total_differences=total,
+            time_taken=time_taken
+        )
+        db.session.add(game)
+        db.session.commit()
+
+        return jsonify({'message': 'Game saved', 'record_id': game.id}), 201
+
+    except Exception as e:
+        print(f"[SAVE-GAME ERROR] {e}")
+        return jsonify({'error': 'Failed to save game or upload images'}), 500
 
 
 
@@ -186,6 +219,9 @@ def allowed_file(filename):
 
 @app.route('/upload-and-process', methods=['POST'])
 def upload_and_process():
+    # Check sessions to see if user is logged in
+    user_id = session.get("user_id")
+
     if 'image' not in request.files:
         return jsonify({'error': 'No image file provided'}), 400
 
@@ -246,46 +282,25 @@ def upload_and_process():
 
             # Save modified image from a numpy array to file before uploading into cloudinary
             cv2.imwrite(modified_filepath, modified_img_array)
+
+            # enable guest_files tracking filepath to track and delete images from guest once they're done with the game.
+            if not user_id:
+                session.setdefault("guest_files", []).extend([original_filepath, modified_filepath]) # saves filepaths to session["guest_files"]
             
-            # OPTION 1: Upload the images within Cloudinary
-            cloudinary_original = cloud_upload.upload(original_filepath)
-            cloudinary_modified = cloud_upload.upload(modified_filepath)
-
-            # URL from cloudinary to access images
-            original_url = cloudinary_original['secure_url']
-            modified_url = cloudinary_modified['secure_url']
-
-            # To save space, delete the images stored internally once uploads are complete
-            try:
-                os.remove(original_filepath)
-                os.remove(modified_filepath)
-            except Exception as e:
-                print(f"Error removing locally stored files after cloudinary uploads: {e}")
-
-            # return cloudinary filepaths in JSON format
+            # Return the local file paths (you can serve these via Flask route if needed)
             return jsonify({
-                'originalImageUrl': original_url,
-                'modifiedImageUrl':modified_url,
-                'rawDifferencesForFrontendDemo': differences # Send the bounding box differences'
+                'originalImageUrl': original_filepath,
+                'modifiedImageUrl': modified_filepath,
+                'rawDifferencesForFrontendDemo': differences
             }), 200
-
-
-            # # OPTION 2: Save the modified image internally (failsafe)
-            # cv2.imwrite(modified_filepath, modified_img_array)
-            # print(f"Modified image saved to: {modified_filepath}")
-
-            # # If loaded internally, return filepaths of both original and modifed images in JSON format 
-            # return jsonify({
-            #     'originalImageUrl': f'/{UPLOAD_FOLDER}/{original_filename}',
-            #     'modifiedImageUrl': f'/{UPLOAD_FOLDER}/{modified_filename}',
-            #     'rawDifferencesForFrontendDemo': differences # Send the bounding box differences
-            # }), 200 # 200 is the status code for successful request
 
         except Exception as e:
             print(f"Server error during processing: {e}")
+            return jsonify({'error': 'Server error during processing'}), 500
 
-    else:
-        return jsonify({'error': 'Invalid file type. Allowed: png, jpg, jpeg, gif'}), 400 # Code 400 for invalid inputs error
+
+    return jsonify({'error': 'Invalid file type'}), 400
+
 
 # Route to serve the uploaded/modified files (only needed if serving files from own internal server storage)
 # @app.route(f'/{UPLOAD_FOLDER}/<filename>')
@@ -293,16 +308,31 @@ def upload_and_process():
 #     return send_from_directory(UPLOAD_FOLDER, filename)
 
 
+# Route for deleting imageswithin session["guest_files"]
+@app.route("/cleanup-guest-files", methods=["POST"])
+def cleanup_guest_files():
+    files = session.pop("guest_files", [])
+    deleted = []
+    for file in files:
+        try:
+            if os.path.exists(file):
+                os.remove(file)
+                deleted.append(file)
+        except Exception as e:
+            app.logger.warning(f"Failed to delete filepath {file} due to: {e}")
+    
+    return jsonify({"message": "Guest files Cleaned", 'deleted': deleted})
+
+
+
 
 # Created database tables are created at startup
 with app.app_context(): 
     db.create_all()
-
 
 if __name__ == '__main__':
     if not os.path.exists(objects_path):
         os.makedirs(objects_path)
 
     app.run(debug=True, port=5000)
-
 

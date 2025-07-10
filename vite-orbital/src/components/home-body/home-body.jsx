@@ -43,6 +43,17 @@ function Homebody() {
   const MAX_WRONG_CLICKS = 10;
 
 
+  // Function to send POST request to start deleting guest files
+  const cleanupGuestImages = async () => {
+    try {
+      await axios.post(`${BACKEND_URL}/cleanup-temp-files`, {}, { withCredentials: true });
+      console.log("Temporary guest images cleaned up.");
+    } catch (err) {
+      console.error("Failed to clean up guest images", err);
+    }
+  };
+
+
   // Function to draw circles on the canvas
   const drawCircles = useCallback(() => {
     const canvas = canvasRef.current;
@@ -107,31 +118,6 @@ function Homebody() {
         ctx.stroke();
       }
     });
-
-    
-  //   clickAttempts.forEach((attempt) => {
-  //     const {x, y, type, timestamp} = attempt;
-  //     if (type === "correct")
-  //     {
-  //       ctx.beginPath();
-  //       ctx.arc(x, y, 20, 0, Math.PI * 2);
-  //       ctx.lineWidth = 3;
-  //       ctx.strokeStyle = "green";
-  //       ctx.stroke();
-  //     }
-  //     else if (type === "wrong" && (now - timestamp) < X_DURATION) {
-  //       ctx.save();
-  //       ctx.strokeStyle = "red";
-  //       ctx.lineWidth = 4;
-  //       ctx.beginPath();
-  //       ctx.moveTo(x - 10, y - 10);
-  //     ctx.lineTo(x + 10, y + 10);
-  //     ctx.moveTo(x + 10, y - 10);
-  //     ctx.lineTo(x - 10, y + 10);
-  //     ctx.stroke();
-  //     ctx.restore();
-  //     }
-  //   });
 
 
     // If game is over (all found or too many wrong clicks), reveal all differences
@@ -255,7 +241,8 @@ function Homebody() {
     const formData = new FormData();
     formData.append("image", selectedFile);
 
-    try {
+    try 
+    {
       const response = await axios.post(
         `${BACKEND_URL}/upload-and-process`,
         formData,
@@ -263,10 +250,11 @@ function Homebody() {
           headers: {
             "Content-Type": "multipart/form-data",
           },
+          withCredentials: true,
         }
       );
       
-      // response handling from backend 
+      // response handling from flask backend 
       const {
         originalImageUrl: backendOriginalUrl,
         modifiedImageUrl,
@@ -278,7 +266,7 @@ function Homebody() {
         URL.revokeObjectURL(originalImageUrl);
       }
 
-      
+
       setOriginalImageUrl(backendOriginalUrl);
       setModifiedImageUrl(modifiedImageUrl);
       // setOriginalImageUrl(`${BACKEND_URL}${backendOriginalUrl}`);
@@ -374,7 +362,10 @@ function Homebody() {
           setGameStarted(false); // End game
           setGameEnded(true);
 
-          setTimeout(() => drawCircles(), 50);
+          setTimeout(() => {
+            drawCircles(),
+            cleanupGuestImages();
+          }, 50);
         }
       }
     } else {
@@ -414,7 +405,10 @@ function Homebody() {
 
         setFoundDifferences(new Set(differences.map((d) => d.id))); // Reveal all differences
 
-        setTimeout(() => drawCircles(), 50); // Trigger redraw to show all highlights immediately
+        setTimeout(() => {
+          drawCircles(),
+          cleanupGuestImages();
+        }, 50); // Trigger redraw to show all highlights immediately
       }
     }
   };
