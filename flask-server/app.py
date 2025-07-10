@@ -19,7 +19,7 @@ app = Flask(__name__)
 # initialize secret key for session management and CSRF protection
 app.secret_key = os.getenv("FLASK_SECRET_KEY")
 # Allows Flask as a backend to be accessed from React which is ran on another domain
-CORS(app, supports_credentials=True) 
+CORS(app, supports_credentials=True, origins=["http://localhost:5173"]) 
 
 # Configure Cloudinary for image storage
 cloudinary.config(
