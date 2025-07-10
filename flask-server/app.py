@@ -289,8 +289,8 @@ def upload_and_process():
             
             # Return the local file paths (you can serve these via Flask route if needed)
             return jsonify({
-                'originalImageUrl': original_filepath,
-                'modifiedImageUrl': modified_filepath,
+                'originalImageUrl': f'/{UPLOAD_FOLDER}/{original_filename}',
+                'modifiedImageUrl': f'/{UPLOAD_FOLDER}/{modified_filename}',
                 'rawDifferencesForFrontendDemo': differences
             }), 200
 
@@ -303,9 +303,9 @@ def upload_and_process():
 
 
 # Route to serve the uploaded/modified files (only needed if serving files from own internal server storage)
-# @app.route(f'/{UPLOAD_FOLDER}/<filename>')
-# def uploaded_file(filename):
-#     return send_from_directory(UPLOAD_FOLDER, filename)
+@app.route(f'/{UPLOAD_FOLDER}/<filename>')
+def uploaded_file(filename):
+    return send_from_directory(UPLOAD_FOLDER, filename)
 
 
 # Route for deleting imageswithin session["guest_files"]

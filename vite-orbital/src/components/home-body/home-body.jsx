@@ -267,10 +267,10 @@ function Homebody() {
       }
 
 
-      setOriginalImageUrl(backendOriginalUrl);
-      setModifiedImageUrl(modifiedImageUrl);
-      // setOriginalImageUrl(`${BACKEND_URL}${backendOriginalUrl}`);
-      // setModifiedImageUrl(`${BACKEND_URL}${modifiedImageUrl}`);
+      // setOriginalImageUrl(backendOriginalUrl);
+      // setModifiedImageUrl(modifiedImageUrl);
+      setOriginalImageUrl(`${BACKEND_URL}${backendOriginalUrl}`);
+      setModifiedImageUrl(`${BACKEND_URL}${modifiedImageUrl}`);
 
       // Assign a unique ID to each difference for tracking found differences
       const differencesWithIds = rawDifferencesForFrontendDemo.map(
