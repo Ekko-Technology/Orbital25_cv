@@ -18,7 +18,7 @@ DICT_TRANSFORMS = {
     1: "change_color",
     2: "expand_contour"
 }
-MIN_AREA_FOR_CONTOURS = 500
+MIN_AREA_FOR_CONTOURS = 400
 MAX_AREA_FOR_CONTOURS = 1500
 THRESHOLD_CONTOUR_DISTANCE = 100 # Minimum distance between chosen contour centroids
 
@@ -102,8 +102,12 @@ def change_color(img, contour):
     # calculate the median color of the surrounding pixels in ROI_pixels
     median_surrounding_color = np.median(ROI_pixels[ROI_mask == 255], axis=0).astype(np.uint8)
 
+    # Second dilation to extend the mask slightly
+    slight_dilate_kernel = np.ones((8, 8), np.uint8)
+    expanded_mask = cv2.dilate(mask_img, slight_dilate_kernel, iterations=1)
+
     #replace the color of the contour with the median color
-    img[mask_img == 255] = median_surrounding_color
+    img[expanded_mask == 255] = median_surrounding_color
 
     return img
 
@@ -205,6 +209,8 @@ def find_suitable_coordinate(object_path, base_img, all_coordinate_changes):
     # if all the coordinates are too close, simple return a random coordinate from the list then
     return rd.choice(list_of_coordinates)
 
+
+
 def color_adjust_object(object_img, base_img, target_coordinate, alpha): # alpha determines the degree to color blend
     """
     Adjusts the colors of object_img to blend with the base_img region.
@@ -228,8 +234,9 @@ def color_adjust_object(object_img, base_img, target_coordinate, alpha): # alpha
 
     # We realized that the function below existed, essentially doing the same as the code above but decided to keep it for reference and stick to our custom built version
     # adjusted_img = cv2.addWeighted(object_img, max(1-alpha, 0.3), base_patch, alpha, 0) 
-
     return adjusted_img
+
+
 
 # paste png object whilst ensuring background noise is removed
 def paste_object(base_img, object_path, target_coordinate, alpha=0.5, intended_width=30):
@@ -282,12 +289,17 @@ def paste_object(base_img, object_path, target_coordinate, alpha=0.5, intended_w
 
 
 
+# display a summary of a contour's area, perimeter and density
+def contour_metrics(cnt):
+    area = cv2.contourArea(cnt)
+    perimeter = cv2.arcLength(cnt, True)
+    density = area / perimeter if perimeter else 0  # compactness-like measure
+    return area, perimeter, density
+
 # function applies image pre-processing of contour detection and picks suitable contours to modify
 def apply_contour_manipulation(original_img_array, all_coordinate_changes, num_of_changes=1):
     img_modified = original_img_array.copy()
-
-    # img_modified = cv2.resize(img_modified, (640, 640))
-
+    # Basic PreProcessing steps
     gray_img = cv2.cvtColor(img_modified, cv2.COLOR_BGR2GRAY)
     blurred_img = cv2.bilateralFilter(gray_img, 3, 50, 50)
     thresh = cv2.adaptiveThreshold(blurred_img, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY_INV, 11, 2)
@@ -296,34 +308,51 @@ def apply_contour_manipulation(original_img_array, all_coordinate_changes, num_o
 
     contours, _ = cv2.findContours(final_img, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE) 
 
-    good_contours = []
-    for contour in contours:
-        area = cv2.contourArea(contour)
-        if MIN_AREA_FOR_CONTOURS <= area <= MAX_AREA_FOR_CONTOURS:
-            good_contours.append(contour)
-    
-    past_contours_picked = [] 
+
+    # list of suitable candidates for each transformation
+    blend_candidates = []
+    expand_candidates = []
+    past_contours_picked = []
+
+    for c in contours:
+        area, perimeter, density = contour_metrics(c)
+
+        # Criteria for color blending: contour is long enough
+        if 70 < perimeter < 210 or (210 < perimeter < 400 and density < 1):
+            blend_candidates.append(c)
+
+        # Criteria for expansion: reasonable size and density
+        if MIN_AREA_FOR_CONTOURS <= area <= MAX_AREA_FOR_CONTOURS and density > 3:
+            expand_candidates.append(c)
+
+    print(f"Number of Blend Candidates: {len(blend_candidates)}")
+    print(f"Number of expand candidates: {len(expand_candidates)}")
+
 
     for i in range(num_of_changes):
-        contour_chosen = find_suitable_contours(good_contours, past_contours_picked)
+        transform_type = rd.choice(list(DICT_TRANSFORMS.keys()))
+
+        # Choose a suitable contour from the appropriate pool
+        candidate_pool = blend_candidates if transform_type == 1 else expand_candidates
+        contour_chosen = find_suitable_contours(candidate_pool, past_contours_picked)
+
         if contour_chosen is None:
-            break 
+            continue
 
         past_contours_picked.append(contour_chosen)
-
         all_coordinate_changes.append(get_contour_bounding_box(contour_chosen))
 
-        transform_type = rd.choice(list(DICT_TRANSFORMS.keys()))
         
         if transform_type == 1:
-            logging.info(f"Applying color change to contour {i+1}...")
+            print(f"Applying color change to contour with coordinate: {contour_chosen[0][0]}")
             img_modified = change_color(img_modified, contour_chosen)
         elif transform_type == 2:
             expansion_factor = rd.uniform(1.4, 1.5)
-            logging.info(f"Applying expansion (factor {expansion_factor}) to contour {i+1}...")
+            print(f"Applying expansion (factor {expansion_factor}) to contour with coordinate: {contour_chosen[0][0]}")
             img_modified = expand_contour(img_modified, contour_chosen, expansion_factor)
     
     return img_modified
+
 
 
 
@@ -383,7 +412,7 @@ def apply_changes(original_img_array, num_changes):
 
     img_after_contour_changes = apply_contour_manipulation(original_img_array, all_coordinate_changes, num_object_change)
 
-    img_modified = apply_object_addition(img_after_contour_changes, all_coordinate_changes, num_add_change)
+    img_modified = apply_object_addition(img_after_contour_changes, all_coordinate_changes, num_add_change, alpha=0.2)
 
     return img_modified, all_coordinate_changes
 
@@ -392,6 +421,7 @@ def apply_changes(original_img_array, num_changes):
 
 
 # archived code
+
 # def expand_contour(img, contour, expansion_factor):
 #     # Create a black mask of the same size as the image
 #     mask_img = np.zeros(img.shape[:2], dtype=np.uint8) 
@@ -420,3 +450,45 @@ def apply_changes(original_img_array, num_changes):
 #     img[y:y+expanded_crop.shape[0], x:x+expanded_crop.shape[1]] = expanded_crop  # Paste the expanded crop back into the original image
 
 #     return img
+
+
+# def apply_contour_manipulation(original_img_array, all_coordinate_changes, num_of_changes=1):
+
+#     img_modified = original_img_array.copy()
+#     # Basic PreProcessing steps
+#     gray_img = cv2.cvtColor(img_modified, cv2.COLOR_BGR2GRAY)
+#     blurred_img = cv2.bilateralFilter(gray_img, 3, 50, 50)
+#     thresh = cv2.adaptiveThreshold(blurred_img, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY_INV, 11, 2)
+#     kernel = np.ones((5, 5), np.uint8)
+#     final_img = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel)
+
+#     contours, _ = cv2.findContours(final_img, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE) 
+
+#     good_contours = []
+#     for contour in contours:
+#         area = cv2.contourArea(contour)
+#         if MIN_AREA_FOR_CONTOURS <= area <= MAX_AREA_FOR_CONTOURS:
+#             good_contours.append(contour)
+    
+#     past_contours_picked = [] 
+
+#     for i in range(num_of_changes):
+#         contour_chosen = find_suitable_contours(good_contours, past_contours_picked)
+#         if contour_chosen is None:
+#             break 
+
+#         past_contours_picked.append(contour_chosen)
+
+#         all_coordinate_changes.append(get_contour_bounding_box(contour_chosen))
+
+#         transform_type = rd.choice(list(DICT_TRANSFORMS.keys()))
+        
+#         if transform_type == 1:
+#             logging.info(f"Applying color change to contour {i+1}...")
+#             img_modified = change_color(img_modified, contour_chosen)
+#         elif transform_type == 2:
+#             expansion_factor = rd.uniform(1.4, 1.5)
+#             logging.info(f"Applying expansion (factor {expansion_factor}) to contour {i+1}...")
+#             img_modified = expand_contour(img_modified, contour_chosen, expansion_factor)
+    
+#     return img_modified

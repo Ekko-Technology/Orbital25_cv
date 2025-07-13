@@ -222,21 +222,15 @@ function Homebody() {
     setGameStarted(false);
     setGameEnded(true);
 
-    // Optionally wipe the canvas immediately
     if (canvasRef.current) {
       const ctx = canvasRef.current.getContext("2d");
       if (ctx)
-        ctx.clearRect(
-          0,
-          0,
-          canvasRef.current.width,
-          canvasRef.current.height
-        );
+        ctx.clearRect(0, 0, canvasRef.current.width,canvasRef.current.height);
     }
   };
 
 
-  
+
   const handleFileChange = (event) => {
     const file = event.target.files[0];
     setSelectedFile(file);
@@ -538,7 +532,7 @@ function Homebody() {
             <RestartButton
               gameEnded={gameEnded}
               loading={loading}
-              onRestart={triggerFileInput}
+              onRestart={resetGameState}
               showConfirm={showConfirm}
               setShowConfirm={setShowConfirm}
             />
