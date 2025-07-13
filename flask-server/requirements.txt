@@ -9,3 +9,4 @@ scikit_learn==1.6.1
 gunicorn
 cloudinary
 dotenv
+requests

@@ -4,7 +4,7 @@ import {Edit} from 'lucide-react'
 
 function RightUploadCard({ onUpload, loading, selectedFile, modifiedImageUrl, modifiedImageRef, canvasRef, handleImageClick, gameStarted, foundDifferences, differences, clickAttempts, MAX_WRONG_CLICKS}) {
     return (
-        <Card className="h-100 shadow-sm">
+        <Card className="h-100 shadow-sm rounded-4">
             <Card.Header className="text-center bg-primary text-white">
                 Modified Image (Click on the image below!)
             </Card.Header>

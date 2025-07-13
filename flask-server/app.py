@@ -6,6 +6,7 @@ import cv2
 import numpy as np
 import random
 import logging
+import urllib.parse, requests, tempfile
 from datetime import datetime, timezone
 # for securing user password
 from werkzeug.security import generate_password_hash, check_password_hash 
@@ -71,11 +72,6 @@ class GameRecord(db.Model):
     time_taken = db.Column(db.Float, nullable=False)
     played_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
-
-
-@app.route('/')
-def index():
-    return "Flask backend is running on render"
 
 
 # ----- User Logins ------
@@ -323,6 +319,37 @@ def cleanup_guest_files():
     
     return jsonify({"message": "Guest files Cleaned", 'deleted': deleted})
 
+
+
+# Prompts Pollinate.ai to generate an image for us
+@app.route("/ai-generate-image", methods=["POST"])
+def generate_ai_image():
+    data = request.get_json()
+    prompt = data.get("prompt", "").strip()
+    if not prompt:
+        return jsonify({"Error": "No Prompt Given"})
+    # Prompt AI to only give cartoon images
+    prompt = f"cartoon style {prompt}"
+    encoded_prompt = urllib.parse.quote(prompt)
+
+    pollinations_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}"
+
+    pollination_request = requests.get(
+        pollinations_url,
+        params={
+            "width": 640,
+            "height": 640,
+            "model": "gptimage"
+        },
+        timeout=300
+    )
+
+    if pollination_request.status_code != 200:
+        app.logger.error(f"Pollinations error {pollination_request.status_code}: {pollination_request.text[:200]}")
+        return jsonify({"error": "Pollination AI generation failed"}), 502
+    
+
+    return jsonify({"imageUrl": pollinations_url}), 200
 
 
 

@@ -1,10 +1,10 @@
 import React from 'react';
 import {Button, Form, Spinner, Card} from 'react-bootstrap';
-import {Image as ImageIcon} from 'lucide-react'
+import { Image as ImageIcon, Wand2 } from "lucide-react";
 
-function LeftUploadCard({ HeaderText, onFileSelect, onUpload, loading, selectedFile, fileInputRef, triggerFileInput, originalImageUrl, modifiedImageUrl}) {
+function LeftUploadCard({ HeaderText, onFileSelect, onUpload, loading, selectedFile, fileInputRef, triggerFileInput, originalImageUrl, modifiedImageUrl, pollinateImage, setShowPollinateModal}) {
     return (
-        <Card className="h-100 shadow-sm">
+        <Card className="h-100 shadow-sm rounded-4">
             <Card.Header className="text-center bg-dark text-white">
                 {HeaderText}
             </Card.Header>
@@ -23,7 +23,16 @@ function LeftUploadCard({ HeaderText, onFileSelect, onUpload, loading, selectedF
                 </Form>
 
                 {/* Show uploaded image if available */}
-                {originalImageUrl ? (
+                {pollinateImage ? (
+                    <div className="text-center">
+                        <img
+                        src={pollinateImage}
+                        alt="Pollinate AI"
+                        className="img-fluid"
+                        style={{ objectFit: 'contain' }}
+                        />
+                    </div>
+                ) : originalImageUrl ? (
                     <div className="text-center mb-3">
                         <img
                         src={originalImageUrl}
@@ -43,6 +52,15 @@ function LeftUploadCard({ HeaderText, onFileSelect, onUpload, loading, selectedF
                             <p className="mb-0">
                                 Upload an image to begin
                             </p>
+                        </Button>
+
+                        <Button
+                        className="sparkling-purple-btn w-100 mt-4"
+                        onClick={() => setShowPollinateModal(true)}
+                        disabled={loading}
+                        >
+                            <Wand2 size={16} className='mr-2'/>
+                            Generate with Pollinate AI
                         </Button>
                     </div>
                 )}

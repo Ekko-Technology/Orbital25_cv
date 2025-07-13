@@ -13,3 +13,29 @@
     height: 90%;
     object-fit: contain;
 }
+
+.sparkling-purple-btn {
+  background-color: transparent;
+  font-weight: 600;
+  color: #a855f7; /* Light purple text */
+  border: 2px solid #a855f7;
+  box-shadow: 0 0 6px #d8b4fe, 0 0 12px #c084fc;
+  animation: sparkle 1.5s infinite alternate;
+  transition: all 0.3s ease;
+}
+
+.sparkling-purple-btn:hover {
+  background-color: #a855f7;
+  color: white;
+  border-color: #a855f7;
+  box-shadow: 0 0 10px #e9d5ff, 0 0 18px #c084fc;
+}
+
+@keyframes sparkle {
+  from {
+    box-shadow: 0 0 2px #e9d5ff;
+  }
+  to {
+    box-shadow: 0 0 5px #d8b4fe, 0 0 10px #c084fc;
+  }
+}

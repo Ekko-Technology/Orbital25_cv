@@ -14,13 +14,13 @@ import MessageAlert from "../MessageAlert";
 import LeftUploadCard from "../LeftUploadCards";
 import RightUploadCard from "../RightUploadCards";
 import RestartButton from "../RestartButton";
+import PollinateModal from "../PollinateModal";
 import axios from "axios";
 import { v4 as uuidv4 } from "uuid";
 
+// const BACKEND_URL = "https://orbital25-cv.onrender.com"; // Connecting to Render-hosted backend
 
-const BACKEND_URL = "https://orbital25-cv.onrender.com"; // Connecting to Render-hosted backend
-
-// const BACKEND_URL = "http://localhost:5000"; // Connecting to Flask backend
+const BACKEND_URL = "http://localhost:5000"; // Connecting to Flask backend
 
 function Homebody() {
   const [selectedFile, setSelectedFile] = useState(null);
@@ -36,23 +36,29 @@ function Homebody() {
   const [gameEnded, setGameEnded] = useState(true);
   const [showConfirm, setShowConfirm] = useState(false);
 
+  // States for utilizing Pollinate AI
+  const [showPollinateModal, setShowPollinateModal] = useState(false);
+  const [pollinateImage, setPollinateImage] = useState(""); // url of generated image
+
   // References for the canvas and images to get dimensions
   const modifiedImageRef = useRef(null);
   const canvasRef = useRef(null);
   const fileInputRef = useRef(null);
   const MAX_WRONG_CLICKS = 10;
 
-
   // Function to send POST request to start deleting guest files
   const cleanupGuestImages = async () => {
     try {
-      await axios.post(`${BACKEND_URL}/cleanup-temp-files`, {}, { withCredentials: true });
+      await axios.post(
+        `${BACKEND_URL}/cleanup-temp-files`,
+        {},
+        { withCredentials: true }
+      );
       console.log("Temporary guest images cleaned up.");
     } catch (err) {
       console.error("Failed to clean up guest images", err);
     }
   };
-
 
   // Function to draw circles on the canvas
   const drawCircles = useCallback(() => {
@@ -71,7 +77,7 @@ function Homebody() {
     canvas.width = displayedWidth;
     canvas.height = displayedHeight;
 
-    // erases canvas 
+    // erases canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     const now = Date.now();
@@ -79,9 +85,9 @@ function Homebody() {
 
     // Draw circles for correct and incorrect clicks
     clickAttempts.forEach((attempt) => {
-      const {x, y, type, timestamp} = attempt;
-      if (type === "wrong" && (now - timestamp) < X_DURATION) {
-        ctx.save()
+      const { x, y, type, timestamp } = attempt;
+      if (type === "wrong" && now - timestamp < X_DURATION) {
+        ctx.save();
         ctx.strokeStyle = "red";
         ctx.lineWidth = 4;
         ctx.beginPath();
@@ -119,9 +125,11 @@ function Homebody() {
       }
     });
 
-
     // If game is over (all found or too many wrong clicks), reveal all differences
-    if (foundDifferences.size === differences.length && differences.length > 0) {
+    if (
+      foundDifferences.size === differences.length &&
+      differences.length > 0
+    ) {
       differences.forEach((diff) => {
         const [x1_natural, y1_natural, x2_natural, y2_natural] = diff.coords;
 
@@ -151,8 +159,6 @@ function Homebody() {
       });
     }
   }, [clickAttempts, foundDifferences, differences]); // Redraw when dependencies change
-
-
 
   // Redraw when modifiedImageUrl changes or window resizes
   useEffect(() => {
@@ -187,13 +193,12 @@ function Homebody() {
     };
   }, [originalImageUrl]);
 
-
   useEffect(() => {
     const now = Date.now();
     const X_DURATION = 1000;
     const wrongTimestamps = clickAttempts
-    .filter(a => a.type === "wrong" && now - a.timestamp < X_DURATION)
-    .map(a => a.timestamp);
+      .filter((a) => a.type === "wrong" && now - a.timestamp < X_DURATION)
+      .map((a) => a.timestamp);
     if (wrongTimestamps.length > 0) {
       const soonest = Math.min(...wrongTimestamps);
       const timeout = X_DURATION - (now - soonest);
@@ -201,9 +206,37 @@ function Homebody() {
       return () => clearTimeout(timer);
     }
   }, [clickAttempts, drawCircles]);
+  
+
+  // Completely clear the board
+  const resetGameState = () => {
+    setSelectedFile(null);
+    setOriginalImageUrl("");
+    setModifiedImageUrl("");
+    setPollinateImage(""); // clear AI preview
+    setDifferences([]);
+    setFoundDifferences(new Set());
+    setClickAttempts([]);
+    setMessage("");
+    setError("");
+    setGameStarted(false);
+    setGameEnded(true);
+
+    // Optionally wipe the canvas immediately
+    if (canvasRef.current) {
+      const ctx = canvasRef.current.getContext("2d");
+      if (ctx)
+        ctx.clearRect(
+          0,
+          0,
+          canvasRef.current.width,
+          canvasRef.current.height
+        );
+    }
+  };
 
 
-
+  
   const handleFileChange = (event) => {
     const file = event.target.files[0];
     setSelectedFile(file);
@@ -236,13 +269,11 @@ function Homebody() {
     setError("");
     setMessage("");
 
-
     //sends response to flask backend for "upload-and-process"
     const formData = new FormData();
     formData.append("image", selectedFile);
 
-    try 
-    {
+    try {
       const response = await axios.post(
         `${BACKEND_URL}/upload-and-process`,
         formData,
@@ -253,8 +284,8 @@ function Homebody() {
           withCredentials: true,
         }
       );
-      
-      // response handling from flask backend 
+
+      // response handling from flask backend
       const {
         originalImageUrl: backendOriginalUrl,
         modifiedImageUrl,
@@ -265,7 +296,6 @@ function Homebody() {
       if (originalImageUrl.startsWith("blob:")) {
         URL.revokeObjectURL(originalImageUrl);
       }
-
 
       // setOriginalImageUrl(backendOriginalUrl);
       // setModifiedImageUrl(modifiedImageUrl);
@@ -350,6 +380,7 @@ function Homebody() {
       }
     }
 
+
     // --- Game Logic ---
     if (isCorrectClick) {
       if (foundDiffId) {
@@ -363,7 +394,7 @@ function Homebody() {
           setGameEnded(true);
 
           setTimeout(() => {
-            drawCircles(),
+            // drawCircles(),
             cleanupGuestImages();
           }, 50);
         }
@@ -379,7 +410,7 @@ function Homebody() {
             x: clickX_display,
             y: clickY_display,
             type: "wrong",
-            timestamp: Date.now()
+            timestamp: Date.now(),
           },
         ]);
         setMessage(
@@ -406,89 +437,115 @@ function Homebody() {
         setFoundDifferences(new Set(differences.map((d) => d.id))); // Reveal all differences
 
         setTimeout(() => {
-          drawCircles(),
+          // drawCircles(),
           cleanupGuestImages();
         }, 50); // Trigger redraw to show all highlights immediately
       }
     }
   };
 
+  
   // Function to trigger the hidden file input
   const triggerFileInput = () => {
-    fileInputRef.current.click();
-  };
+  resetGameState();               
+  if (fileInputRef.current) {
+    fileInputRef.current.value = "";
+    fileInputRef.current.click();     
+  }
+};
 
   return (
-    <Container className="my-5">
-      {/* Main Control Card (for file selection and messages) */}
-      <Row className="mb-3 justify-content-center">
-        <Col md={12}>
-          {/* If error occurs, insert error div to inform user*/}
-          {error && (
-            <MessageAlert
-              type="danger"
-              text={error}
-              onClose={() => setError(null)}
-            />
-          )}
-          {message && (
-            <MessageAlert
-              type="info"
-              text={message}
-              onClose={() => setMessage("")}
-            />
-          )}
-        </Col>
-      </Row>
+    // pollinate AI model
+    <>
+      <PollinateModal
+        show={showPollinateModal}
+        onClose={() => setShowPollinateModal(false)}
+        backendUrl={BACKEND_URL}
+        onImageReady={async (url) => {
+          setPollinateImage(url);
+          const res = await fetch(url);
+          const blob = await res.blob();
+          const file = new File([blob], "pollinate_image.png", {
+            type: blob.type,
+          });
+          setSelectedFile(file);
+          setOriginalImageUrl(url);
+        }}
+      />
 
-      <Row className="justify-content-center">
-        {/* Left Image Card: Original Image */}
-        <Col md={6} className="mb-3">
-          <LeftUploadCard
-            HeaderText="Original Image"
-            onFileSelect={handleFileChange}
-            onUpload={handleUpload}
-            loading={loading}
-            selectedFile={selectedFile}
-            fileInputRef={fileInputRef}
-            triggerFileInput={triggerFileInput}
-            originalImageUrl={originalImageUrl}
-            modifiedImageUrl={modifiedImageUrl}
-          />
-        </Col>
+      <Container className="my-5">
+        {/* Main Control Card (for file selection and messages) */}
+        <Row className="mb-3 justify-content-center">
+          <Col md={12}>
+            {/* If error occurs, insert error div to inform user*/}
+            {error && (
+              <MessageAlert
+                type="danger"
+                text={error}
+                onClose={() => setError(null)}
+              />
+            )}
+            {message && (
+              <MessageAlert
+                type="info"
+                text={message}
+                onClose={() => setMessage("")}
+              />
+            )}
+          </Col>
+        </Row>
 
-        {/* Right Image Card: Modified Image */}
-        <Col md={6} className="mb-3">
-          <RightUploadCard
-            onUpload={handleUpload}
-            loading={loading}
-            selectedFile={selectedFile}
-            modifiedImageUrl={modifiedImageUrl}
-            modifiedImageRef={modifiedImageRef}
-            canvasRef={canvasRef}
-            handleImageClick={handleImageClick}
-            gameStarted={gameStarted}
-            foundDifferences={foundDifferences}
-            differences={differences}
-            clickAttempts={clickAttempts}
-            MAX_WRONG_CLICKS={MAX_WRONG_CLICKS}
-          />
-        </Col>
-      </Row>
-      
-      {/* restart game with new image button */}
-      <Row className="justify-content-center mt-4">
-        <Col md={4} className="d-flex justify-content-center">
-          <RestartButton
-            gameEnded={gameEnded}
-            loading={loading}
-            onRestart={triggerFileInput}
-            showConfirm={showConfirm}
-            setShowConfirm={setShowConfirm}
-          />
-        </Col>
-      </Row>
-    </Container>
+        <Row className="justify-content-center">
+          {/* Left Image Card: Original Image */}
+          <Col md={6} className="mb-3">
+            <LeftUploadCard
+              HeaderText="Original Image"
+              onFileSelect={handleFileChange}
+              onUpload={handleUpload}
+              loading={loading}
+              selectedFile={selectedFile}
+              fileInputRef={fileInputRef}
+              triggerFileInput={triggerFileInput}
+              originalImageUrl={originalImageUrl}
+              modifiedImageUrl={modifiedImageUrl}
+              pollinateImage={pollinateImage}
+              setShowPollinateModal={setShowPollinateModal}
+            />
+          </Col>
+
+          {/* Right Image Card: Modified Image */}
+          <Col md={6} className="mb-3">
+            <RightUploadCard
+              onUpload={handleUpload}
+              loading={loading}
+              selectedFile={selectedFile}
+              modifiedImageUrl={modifiedImageUrl}
+              modifiedImageRef={modifiedImageRef}
+              canvasRef={canvasRef}
+              handleImageClick={handleImageClick}
+              gameStarted={gameStarted}
+              foundDifferences={foundDifferences}
+              differences={differences}
+              clickAttempts={clickAttempts}
+              MAX_WRONG_CLICKS={MAX_WRONG_CLICKS}
+            />
+          </Col>
+        </Row>
+
+        {/* restart game with new image button */}
+        <Row className="justify-content-center mt-4">
+          <Col md={4} className="d-flex justify-content-center">
+            <RestartButton
+              gameEnded={gameEnded}
+              loading={loading}
+              onRestart={triggerFileInput}
+              showConfirm={showConfirm}
+              setShowConfirm={setShowConfirm}
+            />
+          </Col>
+        </Row>
+      </Container>
+    </>
   );
 }
 

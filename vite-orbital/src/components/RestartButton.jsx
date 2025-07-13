@@ -1,7 +1,7 @@
 import React from "react"
 import {Button, Modal} from "react-bootstrap"
 
-function RestartButton({gameEnded, Loading, onRestart, showConfirm, setShowConfirm }) {
+function RestartButton({gameEnded, loading, onRestart, showConfirm, setShowConfirm }) {
     const handleClick = () => {
         if (!gameEnded)
         {
@@ -18,9 +18,9 @@ function RestartButton({gameEnded, Loading, onRestart, showConfirm, setShowConfi
            <Button 
             variant={gameEnded ? "primary" : "danger"} 
             onClick={handleClick} 
-            disabled={Loading}
+            disabled={loading}
             >
-                {Loading ? "Loading..." : "Restart"}
+                {loading ? "Loading..." : "Restart"}
             </Button>
 
             <Modal show={showConfirm} onHide={() => setShowConfirm(false)} centered>
