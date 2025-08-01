@@ -65,7 +65,8 @@ Session(app)
 ALLOWED_ORIGINS_LIST = [
     "http://localhost:5173",
     "https://localhost:5173",
-    "https://orbital25-cv.vercel.app"
+    "https://orbital25-cv.vercel.app",
+    "https://orbital25-cv-git-main-ekko-technologys-projects.vercel.app/"
 ]
 CORS(app, supports_credentials=True, origins=ALLOWED_ORIGINS_LIST)
 
