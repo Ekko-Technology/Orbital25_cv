@@ -28,7 +28,7 @@ from functools import wraps
 import redis
 
 app = Flask(__name__)
-CORS(app)  
+CORS(app, supports_credentials=True))  
 # initialize secret key for session management and CSRF protection
 app.secret_key = os.getenv("FLASK_SECRET_KEY")
 # Allows Flask as a backend to be accessed from React which is ran on another domain
