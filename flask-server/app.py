@@ -68,7 +68,13 @@ ALLOWED_ORIGINS_LIST = [
     "https://orbital25-cv.vercel.app",
     "https://orbital25-cv-git-main-ekko-technologys-projects.vercel.app"
 ]
-CORS(app, supports_credentials=True, origins=ALLOWED_ORIGINS_LIST)
+
+if IS_LOCAL_DEV_FLAG:
+    # Allow all for local development
+    CORS(app, supports_credentials=True)
+else:
+    # Restrict to known domains in production
+    CORS(app, resources={r"/*": {"origins": ALLOWED_ORIGINS_LIST}}, supports_credentials=True)
 
 # Configure Cloudinary for image storage
 cloudinary.config(
