@@ -65,7 +65,7 @@ Session(app)
 # Allows Flask as a backend to be accessed from React which is ran on another domain
 allowed_origins_env = os.environ.get(
     'CORS_ORIGINS',
-    'http://localhost:5173,https://localhost:5173'
+    'http://localhost:5173,https://localhost:5173,https://orbital25-cv.vercel.app'
 )
 ALLOWED_ORIGINS_LIST = [o.strip() for o in allowed_origins_env.split(',') if o.strip()]
 
