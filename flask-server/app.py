@@ -27,8 +27,7 @@ from functools import wraps
 
 import redis
 
-app = Flask(__name__)
-CORS(app, supports_credentials=True) 
+app = Flask(__name__) 
 # initialize secret key for session management and CSRF protection
 app.secret_key = os.getenv("FLASK_SECRET_KEY")
 # Allows Flask as a backend to be accessed from React which is ran on another domain
@@ -63,14 +62,12 @@ print(f"IS_LOCAL_DEV_FLAG (for reference): {IS_LOCAL_DEV_FLAG}")
 Session(app)
 
 # Allows Flask as a backend to be accessed from React which is ran on another domain
-allowed_origins_env = os.environ.get(
-    'CORS_ORIGINS',
-    'http://localhost:5173,https://localhost:5173,https://orbital25-cv.vercel.app'
-)
-ALLOWED_ORIGINS_LIST = [o.strip() for o in allowed_origins_env.split(',') if o.strip()]
-
-
-CORS(app, supports_credentials=True, origins=ALLOWED_ORIGINS_LIST) 
+ALLOWED_ORIGINS_LIST = [
+    "http://localhost:5173",
+    "https://localhost:5173",
+    "https://orbital25-cv.vercel.app"
+]
+CORS(app, supports_credentials=True, origins=ALLOWED_ORIGINS_LIST)
 
 # Configure Cloudinary for image storage
 cloudinary.config(
