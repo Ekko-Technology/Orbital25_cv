@@ -1,0 +1,13 @@
+
+.modal-body ul, .modal-body ol {
+  padding-left: 25px;
+}
+
+.modal-body li {
+  margin-bottom: 8px;
+}
+
+.modal-body h5, .modal-body h6 {
+  margin-top: 15px;
+  margin-bottom: 10px;
+}
