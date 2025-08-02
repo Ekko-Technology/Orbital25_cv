@@ -1,8 +1,9 @@
 import sys
+
+
 from dotenv import load_dotenv
 load_dotenv()
 
-# flask imports
 from flask import Flask, request, jsonify, send_from_directory, session
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
@@ -27,38 +28,54 @@ from functools import wraps
 
 import redis
 
-app = Flask(__name__)
 
-# Session Config (Production)
+
+app = Flask(__name__)
+# initialize secret key for session management
+app.secret_key = os.getenv("FLASK_SECRET_KEY")
+
+IS_LOCAL_DEV_FLAG = os.getenv('IS_LOCAL_DEV', 'False').lower() == 'true'
+
 app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_USE_SIGNER"] = True
-app.config["SESSION_COOKIE_SECURE"] = True  # Only HTTPS
-app.config["SESSION_COOKIE_SAMESITE"] = "None"  # Allow cross-site cookies
-app.config["SESSION_COOKIE_DOMAIN"] = None  # Default to current domain
 
-# Use Redis for session storage if available
 if os.getenv("REDIS_URL"):
     app.config["SESSION_TYPE"] = "redis"
     app.config["SESSION_REDIS"] = redis.from_url(os.getenv("REDIS_URL"))
+    print("SESSION_TYPE set to: redis (using REDIS_URL)")
 else:
     app.config["SESSION_TYPE"] = "filesystem"
     app.config["SESSION_FILE_DIR"] = os.path.join(os.getcwd(), 'flask_session_data')
-    os.makedirs(app.config["SESSION_FILE_DIR"], exist_ok=True)
+    if not os.path.exists(app.config["SESSION_FILE_DIR"]):
+        os.makedirs(app.config["SESSION_FILE_DIR"])
+    print("SESSION_TYPE set to: filesystem (local fallback)")
 
-Session(app)  # Must be called after session config
+app.config['SESSION_COOKIE_SECURE'] = os.getenv('FLASK_SESSION_SECURE_COOKIE', 'True').lower() == 'true'
+app.config['SESSION_COOKIE_SAMESITE'] = "None"
 
-# CORS: Allow frontend domains only
-ALLOWED_ORIGINS_LIST = [
-    "https://orbital25-cv.vercel.app",
-    "https://orbital25-cv-git-main-ekko-technologys-projects.vercel.app"
-]
-CORS(app, resources={r"/*": {"origins": ALLOWED_ORIGINS_LIST}}, supports_credentials=True)
+app.config['SESSION_COOKIE_DOMAIN'] = os.getenv('SESSION_COOKIE_DOMAIN', None) 
+
+print(f"SESSION_COOKIE_DOMAIN set to: {app.config['SESSION_COOKIE_DOMAIN']}")
+print(f"SESSION_COOKIE_SECURE set to: {app.config['SESSION_COOKIE_SECURE']} (from FLASK_SESSION_SECURE_COOKIE env var)")
+print(f"IS_LOCAL_DEV_FLAG (for reference): {IS_LOCAL_DEV_FLAG}")
+
+# Initialize Flask-Session
+Session(app)
+
+
+# Allows Flask as a backend to be accessed from React which is ran on another domain
+allowed_origins_env = os.environ.get(
+    'CORS_ORIGINS',
+    'http://localhost:5173,https://localhost:5173'
+)
+ALLOWED_ORIGINS_LIST = [o.strip() for o in allowed_origins_env.split(',') if o.strip()]
+CORS(app, supports_credentials=True, origins=ALLOWED_ORIGINS_LIST) 
 
 # Configure Cloudinary for image storage
 cloudinary.config(
     cloud_name = os.getenv("CLOUDINARY_NAME"), 
     api_key = os.getenv("CLOUDINARY_API_KEY"), 
-    api_secret = os.getenv("CLOUDINARY_API_SECRET"), # Click 'View API Keys' above to copy your API secret
+    api_secret = os.getenv("CLOUDINARY_API_SECRET"),
     secure=True
 )
 
@@ -80,6 +97,11 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(150), unique=True, nullable=False)
     password_hash = db.Column(db.Text, nullable=False)  # Hashed password
+
+    # User statistics to be loaded upon login
+    games_played = db.Column(db.Integer, default=0, nullable=False)
+    games_won = db.Column(db.Integer, default=0, nullable=False)
+    total_differences_found = db.Column(db.Integer, default=0, nullable=False)
 
     # JOINS with GameRecord Table 
     game_records = db.relationship('GameRecord', backref='user', lazy=True)
@@ -107,6 +129,7 @@ class GameRecord(db.Model):
 
 
 # ----- User Logins ------
+
 
 # Helper function to check if user is logged in
 def login_required(f):
@@ -183,7 +206,6 @@ def delete_cloudinary_assets_and_folders(public_ids_list, user_identifier="unkno
     return deleted_assets_count, deleted_folders_count, errors
 
 
-
 # Backend for handling user data when registering new user
 @app.route('/register', methods=['POST'])
 def register_user():
@@ -203,11 +225,12 @@ def register_user():
         db.session.add(user)
         db.session.commit()
 
-        return jsonify({'message': 'User created', 'user_id': user.id})
+        return jsonify({'message': 'User created', 'user_id': user.id}), 201
     
     except Exception as e:
         app.logger.error(f"[REGISTER ERROR] {e}")
         return jsonify({'error': 'Server error at registration'}), 500
+
 
 
 # Backend of user login page
