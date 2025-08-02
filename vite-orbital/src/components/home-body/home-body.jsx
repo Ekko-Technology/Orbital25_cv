@@ -21,7 +21,7 @@ import GameHistory from "../GameHistory";
 import axios from "axios";
 import { v4 as uuidv4 } from "uuid";
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL; // Connecting to Render-hosted backend
+const BACKEND_URL = "https://orbital25-cv.onrender.com"; // Connecting to Render-hosted backend
 
 const TIME_LIMIT_SECONDS = 30;
 
@@ -102,6 +102,7 @@ function Homebody({ isLoggedIn, currentUser, onUpdateUserStats, onLogout }) {
       console.error("Failed to clean up logged-in user's temporary Cloudinary assets:", err);
     }
   };
+
 
   // Function to save game data and images (now Cloudinary URLs)
   const saveGameDataAndImages = async (scoreValue, totalValue, originalUrl, modifiedUrl, timeTaken = 0) => { 
@@ -386,7 +387,7 @@ function Homebody({ isLoggedIn, currentUser, onUpdateUserStats, onLogout }) {
         return new Set(differences.map((d) => d.id));
     });
   }, [foundDifferences, differences, originalImageCloudinaryUrl, modifiedImageCloudinaryUrl, isLoggedIn, saveGameDataAndImages, onUpdateUserStats]);
-
+  
   // Completely clear the board
   const resetGameState = async () => {
     console.log("DEBUG: resetGameState called."); 
