@@ -27,55 +27,32 @@ from functools import wraps
 
 import redis
 
-app = Flask(__name__) 
-# initialize secret key for session management and CSRF protection
-app.secret_key = os.getenv("FLASK_SECRET_KEY")
-# Allows Flask as a backend to be accessed from React which is ran on another domain
+app = Flask(__name__)
 
-
-IS_LOCAL_DEV_FLAG = os.getenv('IS_LOCAL_DEV', 'False').lower() == 'true'
-
+# Session Config (Production)
 app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_USE_SIGNER"] = True
+app.config["SESSION_COOKIE_SECURE"] = True  # Only HTTPS
+app.config["SESSION_COOKIE_SAMESITE"] = "None"  # Allow cross-site cookies
+app.config["SESSION_COOKIE_DOMAIN"] = None  # Default to current domain
 
+# Use Redis for session storage if available
 if os.getenv("REDIS_URL"):
     app.config["SESSION_TYPE"] = "redis"
     app.config["SESSION_REDIS"] = redis.from_url(os.getenv("REDIS_URL"))
-    print("SESSION_TYPE set to: redis (using REDIS_URL)")
 else:
     app.config["SESSION_TYPE"] = "filesystem"
     app.config["SESSION_FILE_DIR"] = os.path.join(os.getcwd(), 'flask_session_data')
-    if not os.path.exists(app.config["SESSION_FILE_DIR"]):
-        os.makedirs(app.config["SESSION_FILE_DIR"])
-    print("SESSION_TYPE set to: filesystem (local fallback)")
+    os.makedirs(app.config["SESSION_FILE_DIR"], exist_ok=True)
 
-# app.config['SESSION_COOKIE_SECURE'] = os.getenv('FLASK_SESSION_SECURE_COOKIE', 'True').lower() == 'true'
-app.config['SESSION_COOKIE_SECURE'] = True
-app.config['SESSION_COOKIE_SAMESITE'] = "None"
+Session(app)  # Must be called after session config
 
-app.config['SESSION_COOKIE_DOMAIN'] = os.getenv('SESSION_COOKIE_DOMAIN', None) 
-
-print(f"SESSION_COOKIE_DOMAIN set to: {app.config['SESSION_COOKIE_DOMAIN']}")
-print(f"SESSION_COOKIE_SECURE set to: {app.config['SESSION_COOKIE_SECURE']} (from FLASK_SESSION_SECURE_COOKIE env var)")
-print(f"IS_LOCAL_DEV_FLAG (for reference): {IS_LOCAL_DEV_FLAG}")
-
-# Initialize Flask-Session
-Session(app)
-
-# Allows Flask as a backend to be accessed from React which is ran on another domain
+# CORS: Allow frontend domains only
 ALLOWED_ORIGINS_LIST = [
-    "http://localhost:5173",
-    "https://localhost:5173",
     "https://orbital25-cv.vercel.app",
     "https://orbital25-cv-git-main-ekko-technologys-projects.vercel.app"
 ]
-
-if IS_LOCAL_DEV_FLAG:
-    # Allow all for local development
-    CORS(app, supports_credentials=True)
-else:
-    # Restrict to known domains in production
-    CORS(app, resources={r"/*": {"origins": ALLOWED_ORIGINS_LIST}}, supports_credentials=True)
+CORS(app, resources={r"/*": {"origins": ALLOWED_ORIGINS_LIST}}, supports_credentials=True)
 
 # Configure Cloudinary for image storage
 cloudinary.config(
