@@ -4,7 +4,7 @@ import { Container, Table, Spinner, Alert, Button, Row, Col} from "react-bootstr
 import ImagePreviewModal from "./ImagePreviewModal";
 import "./GameHistory.css"; 
 
-const BACKEND_URL = "https://orbital-2025-backend.onrender.com";
+const BACKEND_URL = "https://orbital25-cv.onrender.com";
 
 function GameHistory({ currentUser, onBackToGame }) {
   const [historyData, setHistoryData] = useState(null);

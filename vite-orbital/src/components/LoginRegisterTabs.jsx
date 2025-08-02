@@ -3,7 +3,7 @@ import { Form, Button, Tabs, Tab, Alert, Spinner } from 'react-bootstrap';
 import { User as UserIcon, LogIn } from 'lucide-react';
 import axios from 'axios';
 
-const BACKEND_URL = "https://orbital-2025-backend.onrender.com";
+const BACKEND_URL = "https://orbital25-cv.onrender.com";
 
 function LoginRegisterTabs({ onLoginSuccess, onRegisterSuccess, authError, setAuthError, initialTab, onTabChange }) {
     const [activeTab, setActiveTab] = useState('login');
