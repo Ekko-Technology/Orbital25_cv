@@ -39,6 +39,15 @@ IS_LOCAL_DEV_FLAG = os.getenv('IS_LOCAL_DEV', 'False').lower() == 'true'
 app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_USE_SIGNER"] = True
 
+# Allows Flask as a backend to be accessed from React which is ran on another domain
+allowed_origins_env = os.environ.get(
+    'CORS_ORIGINS',
+    'http://localhost:5173,https://orbital25-cv.vercel.app',
+)
+ALLOWED_ORIGINS_LIST = [o.strip() for o in allowed_origins_env.split(',') if o.strip()]
+CORS(app, supports_credentials=True, origins=ALLOWED_ORIGINS_LIST) 
+
+
 if os.getenv("REDIS_URL"):
     app.config["SESSION_TYPE"] = "redis"
     app.config["SESSION_REDIS"] = redis.from_url(os.getenv("REDIS_URL"))
@@ -52,7 +61,6 @@ else:
 
 app.config['SESSION_COOKIE_SECURE'] = os.getenv('FLASK_SESSION_SECURE_COOKIE', 'True').lower() == 'true'
 app.config['SESSION_COOKIE_SAMESITE'] = "None"
-
 app.config['SESSION_COOKIE_DOMAIN'] = os.getenv('SESSION_COOKIE_DOMAIN', None) 
 
 print(f"SESSION_COOKIE_DOMAIN set to: {app.config['SESSION_COOKIE_DOMAIN']}")
@@ -61,15 +69,6 @@ print(f"IS_LOCAL_DEV_FLAG (for reference): {IS_LOCAL_DEV_FLAG}")
 
 # Initialize Flask-Session
 Session(app)
-
-
-# Allows Flask as a backend to be accessed from React which is ran on another domain
-allowed_origins_env = os.environ.get(
-    'CORS_ORIGINS',
-    'http://localhost:5173,https://localhost:5173'
-)
-ALLOWED_ORIGINS_LIST = [o.strip() for o in allowed_origins_env.split(',') if o.strip()]
-CORS(app, supports_credentials=True, origins=ALLOWED_ORIGINS_LIST) 
 
 # Configure Cloudinary for image storage
 cloudinary.config(
