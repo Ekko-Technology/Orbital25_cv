@@ -49,7 +49,8 @@ else:
         os.makedirs(app.config["SESSION_FILE_DIR"])
     print("SESSION_TYPE set to: filesystem (local fallback)")
 
-app.config['SESSION_COOKIE_SECURE'] = os.getenv('FLASK_SESSION_SECURE_COOKIE', 'True').lower() == 'true'
+# app.config['SESSION_COOKIE_SECURE'] = os.getenv('FLASK_SESSION_SECURE_COOKIE', 'True').lower() == 'true'
+app.config['SESSION_COOKIE_SECURE'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = "None"
 
 app.config['SESSION_COOKIE_DOMAIN'] = os.getenv('SESSION_COOKIE_DOMAIN', None) 
