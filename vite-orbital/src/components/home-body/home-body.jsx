@@ -21,7 +21,7 @@ import GameHistory from "../GameHistory";
 import axios from "axios";
 import { v4 as uuidv4 } from "uuid";
 
-const BACKEND_URL = "https://orbital-2025-backend.onrender.com"; // Connecting to Render-hosted backend
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL; // Connecting to Render-hosted backend
 
 const TIME_LIMIT_SECONDS = 30;
 
