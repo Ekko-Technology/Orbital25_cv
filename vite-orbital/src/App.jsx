@@ -8,7 +8,7 @@ import UserProfile from './components/UserProfile.jsx';
 import { Modal } from 'react-bootstrap';
 import axios from 'axios';
 
-const BACKEND_URL = "https://orbital-2025-backend.onrender.com"; // Connecting to Render-hosted backend
+const BACKEND_URL = "https://orbital25-cv.onrender.com"; // Connecting to Render-hosted backend
 
 
 function App() {
