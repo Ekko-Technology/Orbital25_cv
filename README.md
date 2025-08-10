@@ -1,6 +1,10 @@
 # Orbital25_cv
 Orbital Project aiming to use computer vision to automate filters and other edits in the game of spot the difference
 
+Deployed app: https://vercel.com/ekko-technologys-projects?repo=https://github.com/Ekko-Technology/Orbital25_cv
+
+
+
 Frontend:
 
 contained within "front_end" folder which contains:
